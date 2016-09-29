@@ -1,0 +1,2 @@
+# dslogger
+基于Boost开发的Log中间层，一端接收socket连接后发送的Log内容，另外一端发送到WebSocket客户端以显示Log内容
