@@ -7,6 +7,11 @@ enum LogType {
 	kLogWarning,
 	kLogError,
 	kLogFault,
+	kLogCommandStart,
+};
+
+enum LogCommand {
+	kCmdSetName = kLogCommandStart,
 };
 
 static const char szLogTypes[][16] = {

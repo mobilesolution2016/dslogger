@@ -4,5 +4,5 @@
 
 extern HWND	hMainWnd;
 
-extern void startSocketServer();
+extern void startSocketServer(const char* listenIp = 0);
 extern void stopSocketServer();

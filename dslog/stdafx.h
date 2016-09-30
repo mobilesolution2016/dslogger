@@ -11,12 +11,16 @@
 // Windows 头文件: 
 #include <windows.h>
 
+#undef min
+#undef max
+
 // C 运行时头文件
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
 #include <iostream>
+#include <algorithm>
 
 // TODO:  在此处引用程序需要的其他头文件
 #include "SystemTraySDK.h"

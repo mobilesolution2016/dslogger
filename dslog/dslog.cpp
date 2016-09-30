@@ -1,5 +1,4 @@
-// dslog.cpp : 定义应用程序的入口点。
-//
+// thanks https://github.com/Jontte/miniws for websocket server
 
 #include "stdafx.h"
 #include "dslog.h"
@@ -38,14 +37,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // 执行应用程序初始化: 
     if (!InitInstance (hInstance, nCmdShow))
-    {
         return FALSE;
-    }
 
 	startSocketServer();
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DSLOG));
-    MSG msg;
+	MSG msg;
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DSLOG));    
 
     // 主消息循环: 
     while (GetMessage(&msg, nullptr, 0, 0))
@@ -93,7 +90,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	if (!hMainWnd)
 		return FALSE;
 
-   	if (!TrayIcon.Create(hInstance, hMainWnd, WM_ICON_NOTIFY, _T("点击右键会弹出菜单 (DSLog)"), ::LoadIcon(hInstance, (LPCTSTR)IDI_SMALL), IDC_DSLOG))
+   	if (!TrayIcon.Create(hInstance, hMainWnd, WM_ICON_NOTIFY, _T("点击右键会弹出菜单 (DSLogger)"), ::LoadIcon(hInstance, (LPCTSTR)IDI_SMALL), IDC_DSLOG))
         return FALSE;
 
 	ShowWindow(hMainWnd, SW_HIDE);
@@ -130,7 +127,7 @@ LRESULT CALLBACK WndProc(HWND hMainWnd, UINT message, WPARAM wParam, LPARAM lPar
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hMainWnd, &ps);
-            // TODO: 在此处添加使用 hdc 的任何绘图代码...
+
             EndPaint(hMainWnd, &ps);
         }
         break;
