@@ -12,6 +12,7 @@ enum LogType {
 
 enum LogCommand {
 	kCmdSetName = kLogCommandStart,
+	kCmdClear,
 };
 
 static const char szLogTypes[][16] = {

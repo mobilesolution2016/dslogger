@@ -240,7 +240,7 @@ void Session::on_connect()
 	sessionsListLock.unlock();
 
 	std::wstring* msg = new std::wstring(_T("日志察看者已连接"));
-	std::wstring* title = new std::wstring(_T("DSLog 提醒"));
+	std::wstring* title = new std::wstring(_T("DSLogger 提醒"));
 
 	PostMessage(hMainWnd, WM_ICON_BALLOON, (WPARAM)msg, (LPARAM)title);
 }
@@ -309,6 +309,20 @@ void stopSocketServer()
 		Sleep(50);
 }
 
+void formatNameAndTime(std::string& strOutput, const char* name)
+{
+	size_t leng;
+	char szFmtBuf[64];
+	SYSTEMTIME curTime;
+
+	GetLocalTime(&curTime);
+	if (name)
+		leng = sprintf(szFmtBuf, "%s(%04d-%04d-%04d %02d:%02d:%02d)", name, curTime.wYear, curTime.wMonth, curTime.wDay, curTime.wHour, curTime.wMinute, curTime.wSecond);
+	else
+		leng = sprintf(szFmtBuf, "(%04d-%04d-%04d %02d:%02d:%02d)", curTime.wYear, curTime.wMonth, curTime.wDay, curTime.wHour, curTime.wMinute, curTime.wSecond);
+	strOutput.append(szFmtBuf, leng);
+}
+
 void onAccept(Client* c, const boost::system::error_code& error)
 {
 	if (error)
@@ -334,22 +348,22 @@ void Client::acceptOne()
 }
 
 void Client::onDisconnected()
-{
+{	
 	clientsListLock.lock();
-	clients.remove(this);
+	AllClients::iterator ite = std::find(clients.begin(), clients.end(), this);
+	if (ite == clients.end())
+	{
+		clientsListLock.unlock();
+		return ;
+	}
+	clients.erase(ite);
 	clientsListLock.unlock();
 
 	stop();
 
 #if 0
-	char szFmtBuf[64];
 	std::string strMsg;
-	SYSTEMTIME curTime;
-
-	GetLocalTime(&curTime);
-	size_t leng = sprintf(szFmtBuf, "*(%04d-%04d-%04d %02d:%02d:%02d)", curTime.wYear, curTime.wMonth, curTime.wDay, curTime.wHour, curTime.wMinute, curTime.wSecond);
-	strMsg.append(szFmtBuf, leng);
-
+	formatNameAndTime(strMsg, "*closed");
 	strMsg += strClientName;
 	strMsg += ":gone away";
 
@@ -370,7 +384,10 @@ void Client::onReadHeader(const boost::system::error_code& error)
 		return;
 	}
 
-	readLength(pckHeader, pckHeader.msgLeng);
+	if (pckHeader.msgLeng == 0)
+		onReadData((char*)&pckHeader, error);
+	else
+		readLength(pckHeader, pckHeader.msgLeng);
 }
 
 void Client::onReadData(char* mem, const boost::system::error_code& error)
@@ -381,6 +398,7 @@ void Client::onReadData(char* mem, const boost::system::error_code& error)
 		return;
 	}
 
+	std::string strMsg;
 	PckHeader* hd = (PckHeader*)mem;
 
 	if (hd->logType >= kLogCommandStart)
@@ -390,23 +408,20 @@ void Client::onReadData(char* mem, const boost::system::error_code& error)
 		case kCmdSetName:
 			strClientName.append((char*)(hd + 1), hd->msgLeng);
 			break;
+		case kCmdClear:
+			strMsg = "*clear";
+			break;
 		}
 	}
 	else
 	{
-		std::string strMsg;
-		char szFmtBuf[64];
-		SYSTEMTIME curTime;
-
 		strMsg.reserve(hd->msgLeng + 160);
 
 		// type
 		strMsg += szLogTypes[hd->logType];
 
 		// time
-		GetLocalTime(&curTime);
-		size_t leng = sprintf(szFmtBuf, "(%04d-%04d-%04d %02d:%02d:%02d)", curTime.wYear, curTime.wMonth, curTime.wDay, curTime.wHour, curTime.wMinute, curTime.wSecond);
-		strMsg.append(szFmtBuf, leng);
+		formatNameAndTime(strMsg, NULL);
 
 		// name
 		strMsg += strClientName;
@@ -414,14 +429,19 @@ void Client::onReadData(char* mem, const boost::system::error_code& error)
 
 		// msg
 		strMsg.append((char*)(hd + 1), hd->msgLeng);
+	}
 
-		// send
+	// send
+	if (strMsg.length())
+	{
 		sessionsListLock.lock();
 		for (WSessions::iterator el = sessions.begin(); el != sessions.end(); ++ el)
 			(*el)->write(strMsg);
 		sessionsListLock.unlock();
 	}
 
-	backPacketBuf(mem);
+	if (hd->msgLeng > 0)
+		backPacketBuf(mem);
+
 	start();
 }
