@@ -24,12 +24,14 @@ $(function() {
 			}
 
 		} else {
-			var row = log.insertRow(-1);			
+			var row = log.insertRow(-1);
 			var b = txt.indexOf(')', a + 1);
+			var c = txt.indexOf(':', b + 1);
 
 			$(document.createElement('pre')).html(txt.substr(0, a)).appendTo(row.insertCell(-1));
 			$(document.createElement('pre')).html(txt.substring(a + 1, b)).appendTo(row.insertCell(-1));
-			$(document.createElement('pre')).html(txt.substr(b + 1)).appendTo(row.insertCell(-1));			
+			$(document.createElement('pre')).html(txt.substring(b + 1, c)).appendTo(row.insertCell(-1));
+			$(document.createTextNode(txt.substr(c + 1))).appendTo(row.insertCell(-1));
 		}
 
 		$doc.scrollTop($doc.height());
