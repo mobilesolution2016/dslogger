@@ -3,6 +3,8 @@ $(function() {
 
 	var $doc = $(document);
 	var $wnd = $(window);
+	
+	var counter = document.getElementById('counter');
 				
 	ws.onopen = function()
 	{
@@ -15,7 +17,6 @@ $(function() {
 		var log = document.getElementById('content');
 
 		var a = txt.indexOf('(');
-
 		if (txt.charCodeAt(0) == 42) {
 			var cmd = a ? txt.substr(1) : txt.substring(1, a);
 			if (cmd == 'clear') {
@@ -35,6 +36,7 @@ $(function() {
 		}
 
 		$doc.scrollTop($doc.height());
+		counter.innerHTML = log.rows.length - 1;
 	};
 
 	ws.onclose = function()
