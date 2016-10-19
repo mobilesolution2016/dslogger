@@ -154,7 +154,7 @@ public:
 	}	
 	static void acceptOne();
 
-	void onDisconnected();
+	void onDisconnected(std::string* pstrErrMsg = 0);
 	void onReadHeader(const boost::system::error_code& error);
 	void onReadData(char* mem, const boost::system::error_code& error);
 
@@ -181,7 +181,9 @@ AllClients clients;
 typedef std::list<Session*> WSessions;
 WSessions	sessions;
 
-DWORD WINAPI serverThread(LPVOID)
+boost::thread *pServerThread = NULL, *pWebSocketThread = NULL;
+
+void serverThreadProc()
 {
 	boost::asio::ip::tcp::resolver::query query(
 		strListenIp,
@@ -210,7 +212,11 @@ DWORD WINAPI serverThread(LPVOID)
 		}
 		catch (std::exception & ex)
 		{
+#ifdef _WINDOWS_
 			MessageBoxA(GetActiveWindow(), ex.what(), "Socket Catched Exception", MB_OK | MB_ICONERROR);
+#else
+			printf("Socket Catched Exception: %s\n", e.what());
+#endif
 		}
 	}
 
@@ -229,8 +235,6 @@ DWORD WINAPI serverThread(LPVOID)
 	ioService.reset();
 
 	bMainRunning = false;
-
-	return 0;
 }
 
 void Session::on_connect()
@@ -239,10 +243,12 @@ void Session::on_connect()
 	sessions.push_back(this);
 	sessionsListLock.unlock();
 
+#ifdef _WINDOWS_
 	std::wstring* msg = new std::wstring(_T("日志察看者已连接"));
 	std::wstring* title = new std::wstring(_T("DSLogger 提醒"));
 
 	PostMessage(hMainWnd, WM_ICON_BALLOON, (WPARAM)msg, (LPARAM)title);
+#endif
 }
 
 void Session::on_disconnect()
@@ -257,7 +263,7 @@ void Session::on_message(const string& msg)
 	
 }
 
-DWORD WINAPI threadWebSocket(LPVOID)
+void threadWebSocketProc()
 {
 	boost::asio::ip::tcp::resolver::query query(
 		strListenIp,
@@ -277,12 +283,14 @@ DWORD WINAPI threadWebSocket(LPVOID)
 		}
 		catch (std::exception& e)
 		{
+#ifdef _WINDOWS_
 			MessageBoxA(GetActiveWindow(), e.what(), "WS Catched Exception", MB_OK | MB_ICONERROR);
+#else
+			printf("WS Catched Exception: %s\n", e.what());
+#endif
 		}
 	}
 	bWSRunning = false;
-
-	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -291,12 +299,11 @@ void startSocketServer(const char* listenIp)
 	if (listenIp && listenIp[0])
 		strListenIp = listenIp;
 
-	DWORD dwId = 0;
-	HANDLE h = CreateThread(0, 0, &serverThread, 0, 0, &dwId);
-	CloseHandle(h);
+	pServerThread = new boost::thread(&serverThreadProc);
+	pWebSocketThread = new boost::thread(&threadWebSocketProc);
 
-	h = CreateThread(0, 0, &threadWebSocket, 0, 0, &dwId);
-	CloseHandle(h);
+	pServerThread->detach();
+	pWebSocketThread->detach();
 }
 
 void stopSocketServer()
@@ -305,8 +312,14 @@ void stopSocketServer()
 	ioService.stop();
 	wsService.stop();
 
+	pServerThread->interrupt();
+	pWebSocketThread->interrupt();
+
 	while(bMainRunning || bWSRunning)
 		Sleep(50);
+
+	delete pServerThread;
+	delete pWebSocketThread;
 }
 
 void formatNameAndTime(std::string& strOutput, const char* name)
@@ -315,11 +328,24 @@ void formatNameAndTime(std::string& strOutput, const char* name)
 	char szFmtBuf[64];
 	SYSTEMTIME curTime;
 
+#ifdef _WINDOWS_
 	GetLocalTime(&curTime);
 	if (name)
 		leng = sprintf(szFmtBuf, "%s(%04d-%04d-%04d %02d:%02d:%02d)", name, curTime.wYear, curTime.wMonth, curTime.wDay, curTime.wHour, curTime.wMinute, curTime.wSecond);
 	else
 		leng = sprintf(szFmtBuf, "(%04d-%04d-%04d %02d:%02d:%02d)", curTime.wYear, curTime.wMonth, curTime.wDay, curTime.wHour, curTime.wMinute, curTime.wSecond);
+#else
+	time_t tcur;
+
+	time(&tcur);
+	struct tm* t = localtime(&tcur);
+
+	if (name)
+		leng = sprintf(szFmtBuf, "%s(%04d-%04d-%04d %02d:%02d:%02d)", name, t->tm_year + 1900, t->tm_mon + 1, t->tm_wday + 1, t->tm_hour, t->tm_sec, t->tm_sec);
+	else
+		leng = sprintf(szFmtBuf, "(%04d-%04d-%04d %02d:%02d:%02d)", t->tm_year + 1900, t->tm_mon + 1, t->tm_wday + 1, t->tm_hour, t->tm_sec, t->tm_sec);
+#endif
+
 	strOutput.append(szFmtBuf, leng);
 }
 
@@ -337,6 +363,18 @@ void onAccept(Client* c, const boost::system::error_code& error)
 
 	c->start();
 
+	// tip
+	//char buf[256];
+	//size_t leng = sprintf(buf, "日志产生者<%s:%u>已连接", c->sock.remote_endpoint().address().to_string().c_str(), c->sock.remote_endpoint().port());
+	//int wcch = MultiByteToWideChar(CP_ACP, 0, buf, leng, 0, 0);
+
+	//std::wstring* msg = new std::wstring();
+	//std::wstring* title = new std::wstring(_T("DSLogger 提醒"));
+
+	//msg->resize(wcch);
+	//MultiByteToWideChar(CP_ACP, 0, buf, leng, const_cast<wchar_t*>(msg->data()), wcch);
+	//PostMessage(hMainWnd, WM_ICON_BALLOON, (WPARAM)msg, (LPARAM)title);
+
 	Client::acceptOne();
 }
 
@@ -347,8 +385,32 @@ void Client::acceptOne()
 	acceptor.async_accept(c->sock, boost::bind(&onAccept, c, boost::asio::placeholders::error));
 }
 
-void Client::onDisconnected()
-{	
+void Client::onDisconnected(std::string* pstrErrMsg)
+{
+	// tip
+	//char buf[256];
+	//size_t leng = sprintf(buf, "日志产生者<%s:%u>已断开连接", sock.remote_endpoint().address().to_string().c_str(), sock.remote_endpoint().port());
+
+	//int wcch = MultiByteToWideChar(CP_ACP, 0, buf, leng, 0, 0);
+	//if (pstrErrMsg)
+	//	wcch += MultiByteToWideChar(CP_ACP, 0, pstrErrMsg->c_str(), pstrErrMsg->length(), 0, 0) + 1;
+
+	//std::wstring* msg = new std::wstring();
+	//std::wstring* title = new std::wstring(_T("DSLogger 提醒"));
+
+	//msg->resize(wcch);
+	//wchar_t* dst = const_cast<wchar_t*>(msg->data());
+
+	//dst += MultiByteToWideChar(CP_ACP, 0, buf, leng, dst, wcch);
+	//if (pstrErrMsg)
+	//{
+	//	*dst ++ = ':';
+	//	MultiByteToWideChar(CP_ACP, 0, pstrErrMsg->c_str(), pstrErrMsg->length(), dst, wcch);
+	//}
+
+	//PostMessage(hMainWnd, WM_ICON_BALLOON, (WPARAM)msg, (LPARAM)title);
+
+	// 
 	clientsListLock.lock();
 	AllClients::iterator ite = std::find(clients.begin(), clients.end(), this);
 	if (ite == clients.end())
@@ -379,8 +441,8 @@ void Client::onDisconnected()
 void Client::onReadHeader(const boost::system::error_code& error)
 {
 	if (error)
-	{
-		onDisconnected();
+	{		
+		onDisconnected(&error.message());
 		return;
 	}
 
@@ -394,7 +456,7 @@ void Client::onReadData(char* mem, const boost::system::error_code& error)
 {
 	if (error)
 	{
-		onDisconnected();
+		onDisconnected(&error.message());
 		return;
 	}
 
