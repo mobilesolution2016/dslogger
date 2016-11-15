@@ -15,6 +15,7 @@ boost::mutex clientsListLock;
 boost::mutex sessionsListLock;
 
 std::string strListenIp = "127.0.0.1";
+uint32_t gGlobalId = 0;
 
 class Client
 {
@@ -35,6 +36,7 @@ public:
 public:
 	Client() 
 		: sock(ioService)
+		, globalId(0)
 	{
 		firstBuf = lastBuf = 0;
 	}
@@ -162,6 +164,7 @@ public:
 	tcpsocket			sock;
 	PckHeader			pckHeader;	
 	PacketBuf			*firstBuf, *lastBuf;
+	uint32_t			globalId;
 	boost::mutex		bufLock;
 	std::string			strClientName;
 };
@@ -382,6 +385,7 @@ void onAccept(Client* c, const boost::system::error_code& error)
 void Client::acceptOne()
 {
 	Client* c = new Client();
+	c->globalId = ++ gGlobalId;
 	acceptor.async_accept(c->sock, boost::bind(&onAccept, c, boost::asio::placeholders::error));
 }
 
@@ -423,17 +427,20 @@ void Client::onDisconnected(std::string* pstrErrMsg)
 
 	stop();
 
-#if 0
 	std::string strMsg;
-	formatNameAndTime(strMsg, "*closed");
-	strMsg += strClientName;
-	strMsg += ":gone away";
 
+	// name
+	strMsg += strClientName;
+	strMsg += '|';
+
+	// time
+	formatNameAndTime(strMsg, "*closed");
+
+	// broad
 	sessionsListLock.lock();
 	for (WSessions::iterator el = sessions.begin(); el != sessions.end(); ++ el)
 		(*el)->write(strMsg);
 	sessionsListLock.unlock();
-#endif
 
 	delete this;
 }
@@ -441,7 +448,7 @@ void Client::onDisconnected(std::string* pstrErrMsg)
 void Client::onReadHeader(const boost::system::error_code& error)
 {
 	if (error)
-	{		
+	{
 		onDisconnected(&error.message());
 		return;
 	}
@@ -459,9 +466,16 @@ void Client::onReadData(char* mem, const boost::system::error_code& error)
 		onDisconnected(&error.message());
 		return;
 	}
-
+	
 	std::string strMsg;
+	char idBuf[32] = { 0 };
 	PckHeader* hd = (PckHeader*)mem;
+
+	strMsg.reserve(hd->msgLeng + 200);
+
+	// name
+	strMsg += strClientName;
+	strMsg += '|';
 
 	if (hd->logType >= kLogCommandStart)
 	{
@@ -471,30 +485,24 @@ void Client::onReadData(char* mem, const boost::system::error_code& error)
 			strClientName.append((char*)(hd + 1), hd->msgLeng);
 			break;
 		case kCmdClear:
-			strMsg = "*clear";
+			formatNameAndTime(strMsg, "*clear");
 			break;
 		}
 	}
 	else
 	{
-		strMsg.reserve(hd->msgLeng + 160);
-
 		// type
 		strMsg += szLogTypes[hd->logType];
 
 		// time
 		formatNameAndTime(strMsg, NULL);
 
-		// name
-		strMsg += strClientName;
-		strMsg += ':';
-
 		// msg
 		strMsg.append((char*)(hd + 1), hd->msgLeng);
 	}
 
 	// send
-	if (strMsg.length())
+	if (strMsg.length() > strClientName.length() + 1)
 	{
 		sessionsListLock.lock();
 		for (WSessions::iterator el = sessions.begin(); el != sessions.end(); ++ el)

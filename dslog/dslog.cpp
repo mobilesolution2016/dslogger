@@ -14,10 +14,14 @@ WCHAR szTitle[MAX_LOADSTRING];                  // 标题栏文本
 WCHAR szWindowClass[MAX_LOADSTRING];            // 主窗口类名
 CSystemTray TrayIcon;
 
+std::vector<std::string> localAddress;
+extern std::string strListenIp;
+
 // 此代码模块中包含的函数的前向声明: 
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    IpWndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -29,6 +33,25 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: 在此放置代码。
+	WSADATA wsa;
+	WSAStartup(MAKELONG(2, 2), &wsa);
+
+	char ac[80] = { 0 };
+
+	localAddress.push_back("127.0.0.1");
+	if (gethostname(ac, sizeof(ac)) != SOCKET_ERROR)
+	{
+		struct hostent *phe = gethostbyname(ac);
+		if (phe)
+		{			
+			for (int i = 0; phe->h_addr_list[i] != 0; ++ i)
+			{
+				struct in_addr addr;
+				memcpy(&addr, phe->h_addr_list[i], sizeof(struct in_addr));
+				localAddress.push_back(inet_ntoa(addr));
+			}
+		}
+	}
 
     // 初始化全局字符串
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -38,7 +61,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // 执行应用程序初始化: 
     if (!InitInstance (hInstance, nCmdShow))
         return FALSE;
+	
+	// 选择IP
+	if (localAddress.size() > 1)
+	{
+		if (DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG_IP), hMainWnd, IpWndProc) == IDCANCEL)
+		{
+			DestroyWindow(hMainWnd);
+			return 0;
+		}
+	}
 
+	// 开始服务
 	startSocketServer();
 
 	MSG msg;
@@ -56,6 +90,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	stopSocketServer();
 
+	WSACleanup();
     return (int) msg.wParam;
 }
 
@@ -169,4 +204,41 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
     return (INT_PTR)FALSE;
+}
+
+
+INT_PTR CALLBACK IpWndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_INITDIALOG:
+	{
+		for (size_t i = 0; i < localAddress.size(); ++ i)
+			SendDlgItemMessageA(hDlg, IDC_IP_LIST, LB_ADDSTRING, 0, (LPARAM)localAddress[i].c_str());
+
+		RECT rc;
+		GetWindowRect(hDlg, &rc);
+		SetWindowPos(hDlg, 0, (GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2, (GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+
+		SendDlgItemMessage(hDlg, IDC_IP_LIST, LB_SETCURSEL, 0, 0);
+	}
+		return TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK)
+		{
+			size_t i = SendDlgItemMessage(hDlg, IDC_IP_LIST, LB_GETCURSEL, 0, 0);
+			if (i >= 0 && i < localAddress.size())
+				strListenIp = localAddress[i];
+
+			EndDialog(hDlg, LOWORD(wParam));
+		}
+		else if (LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+		}
+		
+		return (INT_PTR)TRUE;
+	}
+	return (INT_PTR)FALSE;
 }
