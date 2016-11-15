@@ -12,7 +12,25 @@ HWND hMainWnd;
 HINSTANCE hInst;                                // 当前实例
 WCHAR szTitle[MAX_LOADSTRING];                  // 标题栏文本
 WCHAR szWindowClass[MAX_LOADSTRING];            // 主窗口类名
-CSystemTray TrayIcon;
+WCHAR szRandomIden[32] = { 0 };
+char szRandomIdenMB[32] = { 0 };
+
+class CDsloggerMenu : public CSystemTray
+{
+public:
+	void CustomizeMenu(HMENU m)
+	{
+		MENUITEMINFO info = { 0 };
+		info.cbSize = sizeof(info);
+		info.fMask = MIIM_ID | MIIM_STRING;
+		info.wID = IDM_NAME;
+		info.dwTypeData = szRandomIden;
+		InsertMenuItem(m, 0, TRUE, &info);
+
+		::SetMenuDefaultItem(m, 0, TRUE);
+	}
+};
+CDsloggerMenu TrayIcon;
 
 std::vector<std::string> localAddress;
 extern std::string strListenIp;
@@ -31,6 +49,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+	time_t tId = time(NULL) - 0x582B2131;
+	swprintf(szRandomIden, _T("ID: %X"), tId);
+	sprintf(szRandomIdenMB, "ID: %X", tId);
 
     // TODO: 在此放置代码。
 	WSADATA wsa;
@@ -94,6 +116,78 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int) msg.wParam;
 }
 
+BOOL HttpRequest(int GetMethod, LPCSTR Host, LPCSTR url, LPCSTR header, LPSTR data)
+{
+	try {
+		char httpUseragent[512];
+		DWORD szhttpUserAgent = sizeof(httpUseragent);
+		ObtainUserAgentString(0, httpUseragent, &szhttpUserAgent);
+
+		char m[5];
+		BOOL r = FALSE;
+		strcpy(m, GetMethod ? "GET" : "POST");
+
+		// http://msdn.microsoft.com/en-us/library/windows/desktop/aa385096%28v=vs.85%29.aspx
+		HINTERNET internet = InternetOpenA(httpUseragent, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+		if (internet != NULL)
+		{
+			// http://msdn.microsoft.com/en-us/library/windows/desktop/aa384363%28v=vs.85%29.aspx
+			HINTERNET connect = InternetConnectA(internet, Host, INTERNET_DEFAULT_HTTP_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
+			if (connect != NULL)
+			{
+				// http://msdn.microsoft.com/en-us/library/windows/desktop/aa384233%28v=vs.85%29.aspx
+				HINTERNET request = HttpOpenRequestA(connect, m, url, "HTTP/1.1", NULL, NULL,
+					INTERNET_FLAG_HYPERLINK | INTERNET_FLAG_IGNORE_CERT_CN_INVALID |
+					INTERNET_FLAG_IGNORE_CERT_DATE_INVALID |
+					INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTP |
+					INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTPS |
+					INTERNET_FLAG_NO_AUTH |
+					INTERNET_FLAG_NO_CACHE_WRITE |
+					INTERNET_FLAG_NO_UI |
+					INTERNET_FLAG_PRAGMA_NOCACHE |
+					INTERNET_FLAG_RELOAD, NULL);
+
+				if (request != NULL)
+				{
+					int datalen = 0;
+					if (data != NULL) datalen = strlen(data);
+					int headerlen = 0;
+					if (header != NULL) headerlen = strlen(header);
+
+					// http://msdn.microsoft.com/en-us/library/windows/desktop/aa384247%28v=vs.85%29.aspx
+					HttpSendRequestA(request, header, headerlen, data, datalen);
+
+					// http://msdn.microsoft.com/en-us/library/windows/desktop/aa384350%28v=vs.85%29.aspx
+					InternetCloseHandle(request);
+
+					r = TRUE;
+				}
+			}
+
+			InternetCloseHandle(connect);
+		}
+
+		InternetCloseHandle(internet);
+		return r;
+	}
+	catch (...) 
+	{
+	}
+
+	return FALSE;
+}
+
+void SaveListenAddress()
+{
+	std::string strData = "ip=";
+	strData += strListenIp;
+
+	std::string strPath = "/saveip.php?id=";
+	strPath += szRandomIdenMB + 4;
+
+	HttpRequest(FALSE, "www.crossdk.cn", strPath.c_str(), "Content-Type: application/x-www-form-urlencoded", const_cast<char*>(strData.c_str()));
+}
+
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -153,6 +247,9 @@ LRESULT CALLBACK WndProc(HWND hMainWnd, UINT message, WPARAM wParam, LPARAM lPar
             case IDM_EXIT:
                 DestroyWindow(hMainWnd);
                 break;
+			case IDM_SAVE_ADDRESS:
+				SaveListenAddress();
+				break;
             default:
                 return DefWindowProc(hMainWnd, message, wParam, lParam);
             }
