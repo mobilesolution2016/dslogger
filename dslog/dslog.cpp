@@ -50,7 +50,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-	time_t tId = time(NULL) - 0x582B2131;
+	SYSTEMTIME tm;
+	GetLocalTime(&tm);
+	DWORD tId = tm.wHour * 3600 + tm.wMinute * 60 + tm.wSecond;
 	swprintf(szRandomIden, _T("ID: %X"), tId);
 	sprintf(szRandomIdenMB, "ID: %X", tId);
 
