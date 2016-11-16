@@ -48,7 +48,7 @@ $(function() {
 		{
 			var txt = evt.data;
 			var idEnd = txt.indexOf('|');
-			var id = txt.substring(0, idEnd);		
+			var id = txt.substring(0, idEnd);
 
 			txt = txt.substr(idEnd + 1);
 			var a = txt.indexOf('(');
@@ -85,6 +85,7 @@ $(function() {
 
 		ws.onerror = function()
 		{
+			showMask();
 			$('.loading-container input:text').val('').attr('disabled', false);
 		} ;
 
@@ -135,4 +136,5 @@ $(function() {
 	}
 
 	showMask();
+	onWS(ws);
 });
