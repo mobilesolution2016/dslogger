@@ -9,11 +9,17 @@ $(function() {
 	var counter = document.getElementById('counter');
 
 	function toggleClient() {
-		var bts = $('#all-clients').children('button');
+		var bts = $('#all-clients').children('button').removeClass('bt-actived');
 		var logs = $('div.log-content');
-
+		
 		for(var i = 0; i < bts.length; ++ i) {
-			$(logs[i]).css('display', (bts[i] == this) ? 'block' : 'none');
+			if (bts[i] == this) {
+				$(logs[i]).css('display', 'block');
+				$(bts[i]).addClass('bt-actived');
+
+			} else {
+				$(logs[i]).css('display', 'none');
+			}
 		}
 
 		$doc.scrollTop($doc.height());
@@ -29,10 +35,17 @@ $(function() {
 		var clt = $('#' + cltId);
 		if (clt.length == 0) {
 			clt = $(document.createElement('div')).append(template.children().clone()).appendTo($('body')).attr('id', cltId).addClass('log-content');
-			$('#all-clients').append('<button title="点击切换" id="bt-' + cltId + '">Client:' + cltId + '</button>')
-				.find('button:last').click(toggleClient);
+			var lastBt = $('#all-clients')
+				.append('<button title="点击切换" id="bt-' + cltId + '">Client:' + cltId + '</button>')
+				.find('button:last')
+				.click(toggleClient);
 
 			clt.find('button:first').click(clearClient);
+
+			if ($('#all-clients').children().length == 1)
+				lastBt.addClass('bt-actived');
+			else
+				clt.hide();
 		}
 
 		return clt;
