@@ -320,6 +320,7 @@ INT_PTR CALLBACK IpWndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 		SetWindowPos(hDlg, 0, (GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2, (GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 
 		SendDlgItemMessage(hDlg, IDC_IP_LIST, LB_SETCURSEL, 0, 0);
+		SendDlgItemMessage(hDlg, IDC_IP_LIST, WM_SETFONT, (WPARAM)CreateFont(24, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, _T("Arial")), TRUE);
 	}
 		return TRUE;
 
