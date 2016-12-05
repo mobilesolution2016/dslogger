@@ -187,6 +187,21 @@ void SaveListenAddress()
 	std::string strPath = "/saveip.php?id=";
 	strPath += szRandomIdenMB + 4;
 
+	if (OpenClipboard(hMainWnd))
+	{
+		EmptyClipboard();
+		HGLOBAL hClip = GlobalAlloc(GMEM_MOVEABLE, strListenIp.length() + 1); 
+
+		char * buff;
+		buff = (char*)GlobalLock(hClip);
+
+		strcpy(buff, strListenIp.c_str());
+
+		GlobalUnlock(hClip);
+		SetClipboardData(CF_TEXT, hClip);
+		CloseClipboard();
+	}
+
 	HttpRequest(FALSE, "www.crossdk.cn", strPath.c_str(), "Content-Type: application/x-www-form-urlencoded", const_cast<char*>(strData.c_str()));
 }
 
