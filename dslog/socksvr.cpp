@@ -270,7 +270,7 @@ void threadWebSocketProc()
 {
 	boost::asio::ip::tcp::resolver::query query(
 		strListenIp,
-		boost::lexical_cast< std::string >(9080)
+		boost::lexical_cast< std::string >(9980)
 	);
 	boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
 

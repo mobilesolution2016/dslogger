@@ -1,5 +1,5 @@
 $(function() {
-	var ws = new WebSocket("ws://localhost:9080/dslogger");
+	var ws = new WebSocket("ws://localhost:9980/dslogger");
 
 	var $doc = $(document);
 	var $wnd = $(window);
