@@ -63,6 +63,9 @@ $(function() {
 			var idEnd = txt.indexOf('|');
 			var id = txt.substring(0, idEnd);
 
+			if (!id || id.length == 0)
+				id = 'default';
+
 			txt = txt.substr(idEnd + 1);
 			var a = txt.indexOf('(');
 			var b = txt.indexOf(')', a + 1);
