@@ -188,11 +188,9 @@ boost::thread *pServerThread = NULL, *pWebSocketThread = NULL;
 
 void serverThreadProc()
 {
-	boost::asio::ip::tcp::resolver::query query(
-		strListenIp,
-		boost::lexical_cast< std::string >(9880)
-	);
-	boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
+	boost::asio::ip::address addr;
+	addr.from_string(strListenIp);
+	boost::asio::ip::tcp::endpoint endpoint(addr, short(9880));
 
 	acceptor.open(endpoint.protocol());
 	acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(false));
@@ -268,11 +266,9 @@ void Session::on_message(const string& msg)
 
 void threadWebSocketProc()
 {
-	boost::asio::ip::tcp::resolver::query query(
-		strListenIp,
-		boost::lexical_cast< std::string >(9980)
-	);
-	boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(query);
+	boost::asio::ip::address addr;
+	addr.from_string(strListenIp);
+	boost::asio::ip::tcp::endpoint endpoint(addr, short(9980));
 
 	auto server = WS::Server::create<>(wsService, endpoint);
 	server->handle_resource<Session>("/dslogger");

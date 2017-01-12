@@ -99,14 +99,16 @@ $(function() {
 			$doc.scrollTop($doc.height());
 		};
 
-		ws.onerror = function()
+		ws.onerror = function(e)
 		{
+			console.log(e);
 			showMask();
 			$('.loading-container input:text').val('').attr('disabled', false);
 		} ;
 
-		ws.onclose = function()
+		ws.onclose = function(e)
 		{
+			console.log(e);
 			showMask();
 		};
 	}
