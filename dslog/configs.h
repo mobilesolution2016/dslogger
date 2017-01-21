@@ -56,6 +56,12 @@ public:
 	ProjectConfig();
 	~ProjectConfig();
 
+	void addRef();
+	int release();
+	void setProjectId(uint32_t nId);
+
+	static ProjectConfig* findExists(uint32_t nId);
+
 public:
 	SocketMode			kSocketMode;
 	LogDump				*pDump;
@@ -63,6 +69,7 @@ public:
 	std::string			strProjectName;
 	std::string			strApiToken;
 	std::string			strLogBaseDir;
+	int					iReferenceCount;
 };
 
 //////////////////////////////////////////////////////////////////////////

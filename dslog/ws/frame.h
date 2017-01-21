@@ -24,7 +24,7 @@ struct Frame
 	uint8_t masking_key[4];
 	MessagePtr payload_data;
 
-	bool is_control_frame() { return opcode & 0x8; }
+	bool is_control_frame() { return (opcode & 0x8) ? true : false; }
 
 	void print();
 

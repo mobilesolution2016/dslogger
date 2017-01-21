@@ -179,6 +179,10 @@ Client::Client()
 	, pProject(NULL)
 {
 	firstBuf = lastBuf = 0;
+
+	pProject = new ProjectConfig;
+	pProject->pFormat = new LogFormatDefault;
+	pProject->pDump = new LogDumpDispatchToWebSockets;
 }
 Client::~Client() 
 {
@@ -189,6 +193,8 @@ Client::~Client()
 		free(n);
 		n = nn;
 	}
+
+	pProject->release();
 }
 
 char* Client::getPacketBuf(uint32_t needSize)
@@ -331,6 +337,7 @@ void Client::onDisconnected(std::string* pstrErrMsg)
 	std::string strMsg;
 	LogFormat::LogInfo info = { 0 };
 
+	info.kEvent = LogFormat::kEventClosed;
 	info.pszClientName = strClientName.c_str();
 	info.nameLeng = strClientName.length();
 	if (pstrErrMsg)
@@ -401,6 +408,7 @@ void Client::onReadBody(char* mem, const boost::system::error_code& error)
 	// dump
 	pProject->pDump->onDumpData(strMsg);
 
+	// continue
 	if (hd->msgLeng > 0)
 		backPacketBuf(mem);
 
