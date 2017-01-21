@@ -63,6 +63,12 @@
     <ClInclude Include="socksvr.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="configs.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="dbuffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -94,6 +100,15 @@
     </ClCompile>
     <ClCompile Include="ws\sha1.cpp">
       <Filter>源文件\ws</Filter>
+    </ClCompile>
+    <ClCompile Include="configs.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="dbuffer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="logdump.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

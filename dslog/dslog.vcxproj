@@ -161,6 +161,8 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="configs.h" />
+    <ClInclude Include="dbuffer.h" />
     <ClInclude Include="dslog.h" />
     <ClInclude Include="packets.h" />
     <ClInclude Include="Resource.h" />
@@ -176,7 +178,10 @@
     <ClInclude Include="ws\sha1.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="configs.cpp" />
+    <ClCompile Include="dbuffer.cpp" />
     <ClCompile Include="dslog.cpp" />
+    <ClCompile Include="logdump.cpp" />
     <ClCompile Include="socksvr.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

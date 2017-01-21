@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "dslog.h"
 #include "socksvr.h"
+#include "configs.h"
 
 #define MAX_LOADSTRING 100
 #define	WM_ICON_NOTIFY WM_APP+10
@@ -41,6 +42,48 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    IpWndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+
+void tryLoadConfigs()
+{
+	FILE* fp = fopen("./config.ini", "rb");
+	if (fp)
+	{
+		fseek(fp, 0L, SEEK_END);
+		long s = ftell(fp);
+		fseek(fp, 0L, SEEK_SET);
+
+		char* mem = (char*)malloc(s + 1);
+		fread(mem, 1, s, fp);
+		fclose(fp);
+
+		mem[s] = 0;
+
+		char* ctx = NULL;
+		char* line = strtok_s(mem, "\r\n", &ctx);
+		if (line)
+		{
+			do
+			{
+				while(line[0] != 0 && (uint8_t)line[0] <= 32)
+					line ++;
+
+				if (line[0] != '#')
+				{
+					char* value = strchr(line, '=');
+					value[0] = 0; value ++;
+
+					if (strcmp(line, "wx_appid") == 0)
+						wxcfgAppID = value;
+					else if (strcmp(line, "wx_secret") == 0)
+						wxcfgSecret = value;
+				}
+
+			} while (line = strtok_s(NULL, "\r\n", &ctx));
+		}
+
+		free(mem);
+	}
+}
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -85,6 +128,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // 执行应用程序初始化: 
     if (!InitInstance (hInstance, nCmdShow))
         return FALSE;
+
+	tryLoadConfigs();
 	
 	// 选择IP
 	if (localAddress.size() > 1)
@@ -95,6 +140,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			return 0;
 		}
 	}
+
+	SetTimer(hMainWnd, 101, 1000, NULL);
 
 	// 开始服务
 	startSocketServer();
@@ -249,6 +296,11 @@ LRESULT CALLBACK WndProc(HWND hMainWnd, UINT message, WPARAM wParam, LPARAM lPar
 {
     switch (message)
     {
+	case WM_TIMER:
+		if (wParam == 101)
+			secondsCheckServer();
+		break;
+
 	case WM_ICON_NOTIFY:
 		return TrayIcon.OnTrayNotification(wParam, lParam);
 
